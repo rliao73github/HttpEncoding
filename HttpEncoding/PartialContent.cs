@@ -37,7 +37,7 @@ namespace HttpEncoding
         {
             // Create a TCP/IP client socket.
             // machineName is the host running the server application.
-            TcpClient client = new TcpClient(machineName, 443);
+            TcpClient client = new TcpClient(machineName, 80);
             int intC0 = client.Available;
 
             //--
@@ -198,7 +198,7 @@ namespace HttpEncoding
             completed = true;
         }
 
-        public static void Main(string[] args)
+        public static void Main_PC(string[] args)
         {
             string serverCertificateName = null;
             string machineName = null;
