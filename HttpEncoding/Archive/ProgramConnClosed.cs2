@@ -1,0 +1,101 @@
+﻿using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using RestSharp;
+using System.Collections.Generic;
+
+
+
+namespace HttpEncoding
+{
+    //-- 200 OK GET connection must be closed, 2020-07-10
+    public class GetSocketConnectionClosed
+    {
+        private static RestClient client = new RestClient("https://app2.kitchener.ca/");
+        //public static void TestMain(string[] args)
+        //{
+        //    //RestRequest request = new RestRequest("/esolutions/GetCokStreets/ki", Method.GET);
+        //    //IRestResponse<List<string>> response = client.Execute<List<string>>(request);
+
+        //    ////var host = args[0];
+        //    ////var resource = args[1];
+
+        //    //-- http://app2.kitchener.ca/services/cok_st_tax_calculator.aspx
+
+        //    var host = "app2.kitchener.ca"; //-- "ebilling.kitchener.ca";
+        //var resource = "/services/cok_st_tax_calculator.aspx";
+        //var result = GetResource(host, resource);
+
+        //Console.WriteLine(result);
+        //Console.ReadKey();
+        //}
+
+    private static string GetResource(string host, string resource)
+        {
+            var hostEntry = Dns.GetHostEntry(host);
+            var socket = CreateSocket(hostEntry);
+            SendRequest(socket, host, resource);
+            return GetResponse(socket);
+        }
+
+        private static Socket CreateSocket(IPHostEntry hostEntry)
+        {
+            const int httpPort = 80;
+            //-- const int httpPort = 443; // NOT working with SSL 
+            //-- ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+            foreach (var address in hostEntry.AddressList)
+            {
+                var endPoint = new IPEndPoint(address, httpPort);
+                var socket = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                socket.Connect(endPoint);
+                if (socket.Connected)
+                {
+                    return socket;
+                }
+            }
+            return null;
+        }
+
+        private static void SendRequest(Socket socket, string host, string resource)
+        {
+            //-- OK with GET 200
+            string requestMessage = "GET /services/cok_st_tax_calculator.aspx HTTP/1.1" +
+            "\r\nHost: app2.kitchener.ca" +
+            "\r\nConnection: Close\r\n\r\n";
+//--            "\r\nConnection: Close\r\n\r\n";
+
+            //-- FAIL with forever loop
+            //string requestMessage = "GET /services/cok_st_tax_calculator.aspx HTTP/1.1" +
+            //"\r\nHost: app2.kitchener.ca\r\n\r\n";
+
+            //var requestMessage = String.Format(
+            //    "GET {0} HTTP/1.1\r\n" +
+            //    "Host: {1}\r\n" +
+            //    "\r\n",
+            //    resource, host
+            //);
+
+            var requestBytes = Encoding.ASCII.GetBytes(requestMessage);
+            //-- socket.Send(requestBytes);
+            socket.Send(requestBytes, requestBytes.Length, 0);
+        }
+
+        private static string GetResponse(Socket socket)
+        {
+            int bytes = 0;
+            byte[] bufferRcv = new byte[256];
+            var result = new StringBuilder();
+
+            do
+            {
+                //-- bytes = socket.Receive(bufferRcv);
+                bytes = socket.Receive(bufferRcv, bufferRcv.Length, 0);
+                result.Append(Encoding.ASCII.GetString(bufferRcv, 0, bytes));
+            } while (bytes > 0);
+
+            return result.ToString();
+        }
+    }
+}

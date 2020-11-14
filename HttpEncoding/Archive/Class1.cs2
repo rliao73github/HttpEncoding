@@ -1,0 +1,299 @@
+﻿//using System;
+//using System.Collections.Generic;
+//using System.Data;
+//using System.Linq;
+//using System.Threading.Tasks;
+//using Microsoft.AspNetCore.Mvc;
+//using Microsoft.AspNet.OData;
+//using System.Net;
+//using System.Net.Http;
+//using System.Net.Http.Headers;
+//using System.Text;
+//using System.Text.RegularExpressions;
+//using System.Web.Http;
+//using Microsoft.Extensions.Options;
+//using Newtonsoft.Json;
+//using Newtonsoft.Json.Linq;
+//using UnionGasImporter.Models;
+//using UnionGasImporter.CustomExtensions;
+//using RestSharp;
+//using RestSharp.Authenticators;
+//using Oracle.ManagedDataAccess.Client;
+//using Oracle.ManagedDataAccess.Types;
+
+
+//namespace UnionGasImporter.Controllers
+//{
+//    [Route("api/[controller]")]
+//    [ApiController]
+//    public class UnionGasHourlyImportController : ControllerBase
+//    {
+//        private readonly AppSettings _appSettings;
+//        public UnionGasHourlyImportController(IOptions<AppSettings> appSettings)
+//        {
+//            _appSettings = appSettings.Value;
+
+//        }
+
+//        string sTmp = string.Empty;
+//        string sResults = string.Empty;
+//        string sTmpResult = string.Empty;
+//        string sQues = string.Empty;
+//        string[] separatingStrings = { "||", "<BR>" };
+
+
+//        // GET api/[controller]
+//        [HttpGet("{dr?}")]
+//        public ActionResult<IEnumerable<string>> Get(string dr)
+//        {
+//            string[] sDateArr = new string[2];
+//            DateTime start_date, end_date;
+//            string startDate, endDate;
+
+//            if (string.IsNullOrEmpty(dr.Trim()))
+//            {
+//                start_date = DateTime.Now;
+//                end_date = start_date.AddDays(1);
+//                startDate = "2020-05-01";
+//                endDate = "2020-05-02";
+//            }
+//            else if (dr.IndexOf("-") > 0)
+//            {
+//                try
+//                {
+//                    sDateArr = dr.Split(new Char[] { '-' });
+//                    startDate = sDateArr[0].Substring(0, 4) + "-" + sDateArr[0].Substring(4, 2) + "-" + sDateArr[0].Substring(6, 2);
+//                    endDate = sDateArr[1].Substring(0, 4) + "-" + sDateArr[1].Substring(4, 2) + "-" + sDateArr[1].Substring(6, 2);
+
+//                    start_date = DateTime.Parse(sDateArr[0].Substring(0, 4) + "-" + sDateArr[0].Substring(4, 2) + "-" + sDateArr[0].Substring(6, 2));
+//                    end_date = DateTime.Parse(sDateArr[1].Substring(0, 4) + "-" + sDateArr[1].Substring(4, 2) + "-" + sDateArr[1].Substring(6, 2));
+//                    end_date = end_date.AddDays(1);
+//                }
+//                catch (Exception ex)
+//                {
+//                    throw new Exception("Date format error! " + ex.Message);
+//                }
+
+//            }
+//            else
+//            {
+//                throw new Exception("Date format error!");
+//            }
+
+
+//            string soapInd =
+
+//                "<meas:GetHourlyMeasurement>" +
+
+//                       "<meas:request>" +
+
+//                           "<meas1:Username>wsdm4052</meas1:Username>" +
+
+//                           "<meas1:Password>Uniongas04</meas1:Password>" +
+
+//                           $"<meas1:FromDate>{startDate}</meas1:FromDate>" +
+
+//                           $"<meas1:ToDate>{endDate}</meas1:ToDate>" +
+
+//                           "<meas1:ContractIds>" +
+
+//                                   "<arr:string>SA3863</arr:string>" +
+
+//                           "</meas1:ContractIds>" +
+
+//                            "<meas1:CompanyIds>" +
+
+//                                   "<arr:int>4052</arr:int>" +
+
+//                             "</meas1:CompanyIds>" +
+
+//                        "</meas:request>" +
+
+//                  "</meas:GetHourlyMeasurement>";
+
+
+//            string soapReq = _appSettings.APP_SOAP_HEADER_OPEN + soapInd + _appSettings.APP_SOAP_HEADER_CLOSE;
+
+//            //-- var sResult = JsonConvert.DeserializeObject(soapReq.PostHourlySoapRequest());
+
+//            dynamic tmpObj = JsonConvert.DeserializeObject(soapReq.PostHourlySoapRequest());
+
+//            //-- dynamic sTemp = tmpObj.Meter[2].Measurements.Measurement[i].Temperature;
+
+//            //-- {}{5} use ToObject<T>() to convert type at runtime 
+//            //-- ValueUnitsFactor vif = sTemp.ToObject<ValueUnitsFactor>();
+
+//            //-- saveUnionGasMeter("2548258", tmpObj.Meter[0].Measurements);
+
+//            //-- saveUnionGasMeter("2548259", tmpObj.Meter[1].Measurements);
+
+//            //-- saveUnionGasMeter("2548260", tmpObj.Meter[2].Measurements);
+
+
+//            //-- string sTest = "{\"Value\":\"4.4333\",\"Units\":\"C\",\"Factor\":\"1.04006830\"}";
+
+//            //-- //var data = processedEvent.Data.ToObject(t);
+//            //-- //MyObject data = processedEvent.Data.ToObject<MyObject>();
+
+//            //-- object sObj = JObject.Parse(sTest);
+
+//            //-- var vObj = JObject.Parse(sTest);
+//            //-- return Ok(vif);
+
+
+//            dynamic sFactor = tmpObj.Meter[2].Measurements.Measurement[0].Temperature.Factor;
+
+//            var colors = new { YellowColor = ConsoleColor.Yellow, RedColor = ConsoleColor.Red };
+//            var c1 = colors.RedColor;
+
+
+
+//            //var c1 = hourRead.CorrectedVolume.Value;
+//            //var t1 = hourRead.Temperature.Factor;
+//            //var p1 = hourRead.Pressure.Factor; 
+
+//            //var jsonP = sRead;
+//            //var result = JsonConvert.DeserializeObject<HourlyRead>(jsonP);
+
+//            //var sVal = sRead.CorrectedVolume.Value;
+//            //int i1 = tmpObj.Meter[2].Measurements.Measurement.Count;
+//            //var sRead2 = tmpObj.Meter[2].Measurements.Measurement[0].UncorrectedCCF.Value;
+//            //var sRead3 = sRead.UncorrectedCCF.Value;
+
+//            //-- return Ok(sResult);
+//            return Ok(sFactor);
+
+//        }
+
+//        // GET api/values/5
+//        //[HttpGet("{id}")]
+//        //public ActionResult<string> Get(int id)
+//        //{
+//        //    return string.Empty;
+//        //}
+
+//        // POST api/values
+//        [HttpPost]
+//        public void Post([FromBody] string value)
+//        {
+//        }
+
+//        // PUT api/values/5
+//        [HttpPut("{id}")]
+//        public void Put(int id, [FromBody] string value)
+//        {
+//        }
+
+//        // DELETE api/values/5
+//        [HttpDelete("{id}")]
+//        public void Delete(int id)
+//        {
+//        }
+
+
+//        static void saveUnionGasMeter(string meter_par, dynamic mea_par)
+//        {
+//            //int count = tmpObj.Meter[2].Measurements.Measurement.Count;
+
+//            ////-- for meter 2548260
+//            //for (int i = 0; i < count; i++)
+//            //{
+//            //    dynamic sRead = tmpObj.Meter[2].Measurements.Measurement[i];
+
+//            //    HourlyRead hourRead = sRead.ToObject<HourlyRead>();
+
+//            //    SaveHourlyMeasurement("2548260", hourRead, "N");
+
+//            //}
+
+//            int count = mea_par.Measurement.Count;
+
+//            //-- for meter 2548260
+//            for (int i = 0; i < count; i++)
+//            {
+//                dynamic sRead = mea_par.Measurement[i];
+
+//                HourlyRead hourRead = sRead.ToObject<HourlyRead>();
+
+//                SaveHourlyMeasurement(meter_par, hourRead, "N");
+
+//            }
+//        }
+
+//        //-- save hourly measurement data into INTERNET.COK_MEASUREMENT or INTERNET.COK_MEASUREMENT_TMP
+//        static void SaveHourlyMeasurement(string meter_par, HourlyRead hour_par, string is_past_par)
+//        {
+
+//            string connString = "Password=ipwdfdbs+;User ID=internet;Data Source=intranet_internal";
+//            using (OracleConnection objConn = new OracleConnection(connString))
+//            {
+//                OracleCommand objCmd = new OracleCommand("curspkg_eservice.sf_add_cok_measurement", objConn);
+//                objCmd.CommandType = CommandType.StoredProcedure;
+
+//                OracleParameter para0 = new OracleParameter("return_value", OracleDbType.Int32);
+//                para0.Direction = ParameterDirection.ReturnValue;
+//                objCmd.Parameters.Add(para0);
+
+//                OracleParameter para1 = new OracleParameter("meter_id_par", OracleDbType.Int32);
+//                para1.Direction = System.Data.ParameterDirection.Input;
+//                para1.Value = Convert.ToInt32(meter_par);
+//                objCmd.Parameters.Add(para1);
+
+//                OracleParameter para2 = new OracleParameter("gas_day_par", OracleDbType.Varchar2, 200);
+//                para2.Direction = ParameterDirection.Input;
+//                para2.Value = hour_par.GasDay.ToString("dd-MMM-yyyy h:mm:ss tt");
+//                //-- para2.Value = hour_par.GasDay;
+//                objCmd.Parameters.Add(para2);
+
+//                OracleParameter para3 = new OracleParameter("measure_date_par", OracleDbType.Varchar2, 200);
+//                para3.Direction = ParameterDirection.Input;
+//                para3.Value = hour_par.MeasurementDateTime.ToString("dd-MMM-yyyy h:mm:ss tt");
+//                //-- para3.Value = hour_par.MeasurementDateTime;
+//                objCmd.Parameters.Add(para3);
+
+//                OracleParameter para5 = new OracleParameter("uncor_ccf_par", OracleDbType.Varchar2, 200);
+//                para5.Direction = ParameterDirection.Input;
+//                para5.Value = hour_par.UncorrectedCCF.Value;
+//                objCmd.Parameters.Add(para5);
+
+//                OracleParameter para6 = new OracleParameter("uncor_m3_par", OracleDbType.Varchar2, 200);
+//                para6.Direction = ParameterDirection.Input;
+//                para6.Value = hour_par.UncorrectedM3.Value;
+//                objCmd.Parameters.Add(para6);
+
+//                OracleParameter para7 = new OracleParameter("cor_vol_m3_par", OracleDbType.Varchar2, 200);
+//                para7.Direction = ParameterDirection.Input;
+//                para7.Value = hour_par.CorrectedVolume.Value;
+//                objCmd.Parameters.Add(para7);
+
+//                OracleParameter para8 = new OracleParameter("pressure_par", OracleDbType.Varchar2, 200);
+//                para8.Direction = ParameterDirection.Input;
+//                para8.Value = hour_par.Pressure.Value;
+//                objCmd.Parameters.Add(para8);
+
+//                OracleParameter para9 = new OracleParameter("temperature_par", OracleDbType.Varchar2, 200);
+//                para9.Direction = ParameterDirection.Input;
+//                para9.Value = hour_par.Temperature.Value;
+//                objCmd.Parameters.Add(para9);
+
+//                OracleParameter para10 = new OracleParameter("past_days_par", OracleDbType.Varchar2, 200);
+//                para10.Direction = ParameterDirection.Input;
+//                para10.Value = is_past_par;
+//                objCmd.Parameters.Add(para10);
+
+//                OracleParameter para11 = new OracleParameter("caller_page_par", OracleDbType.Varchar2, 200);
+//                para11.Direction = ParameterDirection.Input;
+//                para11.Value = "ConsoleDMApp.sln";
+//                objCmd.Parameters.Add(para11);
+
+
+//                objConn.Open();
+//                objCmd.ExecuteNonQuery();
+//                objConn.Close();
+
+//            }
+
+//        }  //-- end of SaveHourlyMeasurement
+
+//    }
+//}

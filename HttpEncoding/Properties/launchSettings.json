@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "HttpEncoding": {
+      "commandName": "Project",
+      "commandLineArgs": "google.com      C:\\a_2020Projects\\CER\\google.cer"
+    },
+    "newProfile1": {
+      "commandName": "Executable",
+      "commandLineArgs": "khub.kitchener.ca"
+    }
+  }
+}

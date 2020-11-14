@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <WarningLevel>2</WarningLevel>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="ProgramArv.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Class1.cs2" />
+    <None Remove="Class2.cs2" />
+    <None Remove="Class3.cs2" />
+    <None Remove="ProgramConnClosed.cs2" />
+    <None Remove="ProgramConnError.cs2" />
+    <None Remove="ProgramConnUdp.cs2" />
+    <None Remove="ProgramOKwith80.cs2" />
+    <None Remove="ProgramSocketSSL.cs2" />
+    <None Remove="ProgramSSL.cs2" />
+    <None Remove="ProgramSslUtilDaily.cs2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.12.4" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.30.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.30.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="RestSharp" Version="106.11.4" />
+  </ItemGroup>
+
+</Project>

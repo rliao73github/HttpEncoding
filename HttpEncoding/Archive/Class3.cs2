@@ -1,0 +1,295 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+using System.Xml;
+using Newtonsoft.Json;
+using RestSharp;
+
+namespace HttpEncoding.CustomExtensions
+{
+    // Extension methods must be defined in a static class.
+    public static class StringExtensionfL
+    {
+        public static string C_UNIONGAS_HOST_NAME = "https://unionline.uniongas.com";
+        public static string c_UNIONGAS_SOAP_WSDL = "/DirectConnect/Measurement/DistributionMeasurement.svc";
+
+        // This is the extension method.
+        // The first parameter takes the "this" modifier
+        // and specifies the type for which the method is defined.
+        public static int WordCount(this String str)
+        {
+            return str.Split(new char[] { ' ', '.', '?' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        }
+
+        public static string PrepareJsonData(this string value)
+        {
+            String sField = value.Trim();
+            sField = (string.IsNullOrEmpty(sField)) ? "" : sField;
+            return sField.ToUpper();
+        }
+
+        //-- fixed " , , " issue by RL  2020-04-21
+        public static string PrepareJsonCol(this string value)
+        {
+            String sField = value.Trim();
+            sField = (string.IsNullOrEmpty(sField)) ? string.Empty : sField;
+            return sField.ToUpper();
+        }
+
+        //-- Post Soap request to backend server 
+        public static string PostHourlySoapRequest(this string value)
+        {
+            string sResult = string.Empty;
+
+            //string sTmpReq = _appSettings.LAGAN_SOAP_HEADER_OPEN +
+            //    ind_par +
+            //   _appSettings.LAGAN_SOAP_HEADER_CLOSE;
+
+            var client = new RestClient(C_UNIONGAS_HOST_NAME);
+            //--client.Authenticator = new HttpBasicAuthenticator(_appSettings.APP_MCF_USERNAME, _appSettings.APP_MCF_PASSWORD);  //-- C_MCF_USERNAME, C_MCF_PASSWORD
+
+            var restRequest = new RestRequest(c_UNIONGAS_SOAP_WSDL, Method.POST);
+            restRequest.RequestFormat = DataFormat.Xml;
+
+            //-- set required http header
+            restRequest.AddHeader("Accept", "application/xml");
+            restRequest.AddHeader("Content-Type", "text/xml");
+            restRequest.AddHeader("SOAPAction", "https://unionline.uniongas.com/DirectConnect/Measurement/MeasurementData.xsd/IDistributionMeasurement/GetHourlyMeasurement");
+            //--restRequest.AddHeader("Authorization", "BASIC TGFnYW5UZXN0MDQ6Q2FsbE1lQW55dDFtZSE=");
+
+            //-- set url query params
+            //--restRequest.AddParameter("$format", "json");
+
+            //-- string sReqBody = xmlObj_par.RequestBody;
+            restRequest.AddParameter("application/xml", value, ParameterType.RequestBody);
+
+            IRestResponse restResponse = client.Execute(restRequest);
+            int StatusCode = (int)restResponse.StatusCode;
+
+            if (StatusCode == 200 || StatusCode == 201)
+            {
+                var responseContent = restResponse.Content;
+
+                sResult = responseContent.ProcessSoapResponse();
+
+                return sResult;
+
+            }
+            else
+            {
+                //-- write err into api trace table 
+                var errObj = restResponse.Content;
+                return $"ERRor occurred in Lagan SOAP service call {errObj}.";
+
+            }
+
+        }
+
+        //-- Post Daily Soap request to backend server 
+        public static string PostDailySoapRequest(this string value)
+        {
+            string sResult = string.Empty;
+
+            //string sTmpReq = _appSettings.LAGAN_SOAP_HEADER_OPEN +
+            //    ind_par +
+            //   _appSettings.LAGAN_SOAP_HEADER_CLOSE;
+
+            var client = new RestClient(C_UNIONGAS_HOST_NAME);
+            //--client.Authenticator = new HttpBasicAuthenticator(_appSettings.APP_MCF_USERNAME, _appSettings.APP_MCF_PASSWORD);  //-- C_MCF_USERNAME, C_MCF_PASSWORD
+
+            var restRequest = new RestRequest(c_UNIONGAS_SOAP_WSDL, Method.POST);
+            restRequest.RequestFormat = DataFormat.Xml;
+
+            //-- set required http header
+            restRequest.AddHeader("Accept", "application/xml");
+            restRequest.AddHeader("Content-Type", "text/xml");
+            restRequest.AddHeader("SOAPAction", "https://unionline.uniongas.com/DirectConnect/Measurement/MeasurementData.xsd/IDistributionMeasurement/GetDailyMeasurement");
+            //--restRequest.AddHeader("Authorization", "BASIC TGFnYW5UZXN0MDQ6Q2FsbE1lQW55dDFtZSE=");
+
+            //-- set url query params
+            //--restRequest.AddParameter("$format", "json");
+
+            //-- string sReqBody = xmlObj_par.RequestBody;
+            restRequest.AddParameter("application/xml", value, ParameterType.RequestBody);
+
+            IRestResponse restResponse = client.Execute(restRequest);
+            int StatusCode = (int)restResponse.StatusCode;
+
+            if (StatusCode == 200 || StatusCode == 201)
+            {
+                var responseContent = restResponse.Content;
+
+                sResult = responseContent.ProcessSoapResponse();
+
+                return sResult;
+
+            }
+            else
+            {
+                //-- write err into api trace table 
+                var errObj = restResponse.Content;
+                return $"ERRor occurred in Lagan SOAP service call {errObj}.";
+
+            }
+        }
+
+        //-- Process Lagan Soap response and format to json
+        public static string ProcessSoapResponse(this string value)
+        {
+            //-- replace doublet quotes with single quotes
+            string strNew = value.Replace("\"", "'");
+
+            //-- replace a:, b:, c:, i:, s:, z: with blank
+            strNew = strNew.Replace("a:", string.Empty);
+            strNew = strNew.Replace("b:", string.Empty);
+            strNew = strNew.Replace("c:", string.Empty);
+            strNew = strNew.Replace("d:", string.Empty);
+            strNew = strNew.Replace("i:", string.Empty);
+            strNew = strNew.Replace("s:", string.Empty);
+
+
+            //-- string strNew = "<?xml version='1.0' standalone='no'?>" +
+            //--    "<Envelope><Body><GetDailyMeasurementResponse ><GetDailyMeasurementResult ><SchemaVersion>2.0</SchemaVersion><Message /><Companies ><Company><Id>4052</Id><Name>The Corporation of the City of Kitchener</Name><Contracts><Contract><Id>SA3863</Id><Name>KITCHENER CITY</Name><RedeliveryPoints><RedeliveryPoint><Name>Corporation of the City of Kitchener</Name><Meters><Meter><Number>2548258</Number><Premises>2386916</Premises><Name>Fischer Hallman CCK Gate Stn.</Name><SiteNumber>2</SiteNumber><Measurements><Measurement type='DailyMeasurement'><GasDay>2020-07-01T00:00:00</GasDay><UncorrectedCCF><Value>0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>0</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>0</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>0</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3119.8661</Value><Units>kPa</Units><Factor>0</Factor></Pressure><Temperature><Value>28.9116</Value><Units>C</Units><Factor>0</Factor></Temperature><SuperXFactor>0</SuperXFactor><PeakHourVolume><Hour>12</Hour><Value>0</Value><Units>M3</Units></PeakHourVolume><DegreeDay>0</DegreeDay></Measurement><Measurement type='DailyMeasurement'><GasDay>2020-07-02T00:00:00</GasDay><UncorrectedCCF><Value>0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>0</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>0</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>0</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3119.1709</Value><Units>kPa</Units><Factor>0</Factor></Pressure><Temperature><Value>30.9148</Value><Units>C</Units><Factor>0</Factor></Temperature><SuperXFactor>0</SuperXFactor><PeakHourVolume><Hour>12</Hour><Value>0</Value><Units>M3</Units></PeakHourVolume><DegreeDay>0</DegreeDay></Measurement><Measurement type='DailyMeasurement'><GasDay>2020-07-03T00:00:00</GasDay><UncorrectedCCF><Value>0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>0</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>0</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>0</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3119.7140</Value><Units>kPa</Units><Factor>0</Factor></Pressure><Temperature><Value>29.9035</Value><Units>C</Units><Factor>0</Factor></Temperature><SuperXFactor>0</SuperXFactor><PeakHourVolume><Hour>12</Hour><Value>0</Value><Units>M3</Units></PeakHourVolume><DegreeDay>0</DegreeDay></Measurement><Measurement type='DailyMeasurement'><GasDay>2020-07-04T00:00:00</GasDay><UncorrectedCCF><Value>0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>0</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>0</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>0</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3122.2334</Value><Units>kPa</Units><Factor>0</Factor></Pressure><Temperature><Value>29.4787</Value><Units>C</Units><Factor>0</Factor></Temperature><SuperXFactor>0</SuperXFactor><PeakHourVolume><Hour>12</Hour><Value>0</Value><Units>M3</Units></PeakHourVolume><DegreeDay>0</DegreeDay></Measurement><Measurement type='DailyMeasurement'><GasDay>2020-07-05T00:00:00</GasDay><UncorrectedCCF><Value>0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>0</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>0</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>0</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3124.5776</Value><Units>kPa</Units><Factor>0</Factor></Pressure><Temperature><Value>30.2481</Value><Units>C</Units><Factor>0</Factor></Temperature><SuperXFactor>0</SuperXFactor><PeakHourVolume><Hour>12</Hour><Value>0</Value><Units>M3</Units></PeakHourVolume><DegreeDay>0</DegreeDay></Measurement></Measurements><Removed>false</Removed><LastReadDate nil='true'/></Meter><Meter><Number>2548259</Number><Premises>2386917</Premises><Name>Fischer Hallman CCK Gate Stn.</Name><SiteNumber>3</SiteNumber><Measurements><Measurement type='DailyMeasurement'><GasDay>2020-07-01T00:00:00</GasDay><UncorrectedCCF><Value>0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>0</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>0</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>0</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3119.4266</Value><Units>kPa</Units><Factor>0</Factor></Pressure><Temperature><Value>30.1352</Value><Units>C</Units><Factor>0</Factor></Temperature><SuperXFactor>0</SuperXFactor><PeakHourVolume><Hour>12</Hour><Value>0</Value><Units>M3</Units></PeakHourVolume><DegreeDay>0</DegreeDay></Measurement><Measurement type='DailyMeasurement'><GasDay>2020-07-02T00:00:00</GasDay><UncorrectedCCF><Value>0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>0</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>0</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>0</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3118.7861</Value><Units>kPa</Units><Factor>0</Factor></Pressure><Temperature><Value>32.3819</Value><Units>C</Units><Factor>0</Factor></Temperature><SuperXFactor>0</SuperXFactor><PeakHourVolume><Hour>12</Hour><Value>0</Value><Units>M3</Units></PeakHourVolume><DegreeDay>0</DegreeDay></Measurement><Measurement type='DailyMeasurement'><GasDay>2020-07-03T00:00:00</GasDay><UncorrectedCCF><Value>0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>0</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>0</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>0</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3119.0762</Value><Units>kPa</Units><Factor>0</Factor></Pressure><Temperature><Value>31.3241</Value><Units>C</Units><Factor>0</Factor></Temperature><SuperXFactor>0</SuperXFactor><PeakHourVolume><Hour>12</Hour><Value>0</Value><Units>M3</Units></PeakHourVolume><DegreeDay>0</DegreeDay></Measurement><Measurement type='DailyMeasurement'><GasDay>2020-07-04T00:00:00</GasDay><UncorrectedCCF><Value>0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>0</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>0</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>0</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3121.5555</Value><Units>kPa</Units><Factor>0</Factor></Pressure><Temperature><Value>30.8208</Value><Units>C</Units><Factor>0</Factor></Temperature><SuperXFactor>0</SuperXFactor><PeakHourVolume><Hour>12</Hour><Value>0</Value><Units>M3</Units></PeakHourVolume><DegreeDay>0</DegreeDay></Measurement><Measurement type='DailyMeasurement'><GasDay>2020-07-05T00:00:00</GasDay><UncorrectedCCF><Value>0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>0</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>0</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>0</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3123.8566</Value><Units>kPa</Units><Factor>0</Factor></Pressure><Temperature><Value>31.5505</Value><Units>C</Units><Factor>0</Factor></Temperature><SuperXFactor>0</SuperXFactor><PeakHourVolume><Hour>12</Hour><Value>0</Value><Units>M3</Units></PeakHourVolume><DegreeDay>0</DegreeDay></Measurement></Measurements><Removed>false</Removed><LastReadDate nil='true'/></Meter><Meter><Number>2548260</Number><Premises>2386914</Premises><Name>Plains Rd/Fischer - Strausburg</Name><SiteNumber>1</SiteNumber><Measurements><Measurement type='DailyMeasurement'><GasDay>2020-07-01T00:00:00</GasDay><UncorrectedCCF><Value>2030.0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>5748.3199</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>199640.89768860</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>7786.5939</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3117.1636</Value><Units>kPa</Units><Factor>4.47593710</Factor></Pressure><Temperature><Value>10.1986</Value><Units>C</Units><Factor>1.018906</Factor></Temperature><SuperXFactor>1</SuperXFactor><PeakHourVolume><Hour>22</Hour><Value>10875.20</Value><Units>M3</Units></PeakHourVolume><DegreeDay>7.8014</DegreeDay></Measurement><Measurement type='DailyMeasurement'><GasDay>2020-07-02T00:00:00</GasDay><UncorrectedCCF><Value>1810.0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>5125.3492</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>178313.18677270</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>6954.7492</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3115.8971</Value><Units>kPa</Units><Factor>4.47411860</Factor></Pressure><Temperature><Value>10.8754</Value><Units>C</Units><Factor>1.01647810</Factor></Temperature><SuperXFactor>1</SuperXFactor><PeakHourVolume><Hour>14</Hour><Value>11776.70</Value><Units>M3</Units></PeakHourVolume><DegreeDay>7.1246</DegreeDay></Measurement><Measurement type='DailyMeasurement'><GasDay>2020-07-03T00:00:00</GasDay><UncorrectedCCF><Value>1710.0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>4842.1808</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>167156.28647850</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>6519.5966</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3117.8529</Value><Units>kPa</Units><Factor>4.47692690</Factor></Pressure><Temperature><Value>11.5190</Value><Units>C</Units><Factor>1.014180</Factor></Temperature><SuperXFactor>1</SuperXFactor><PeakHourVolume><Hour>21</Hour><Value>9776.40</Value><Units>M3</Units></PeakHourVolume><DegreeDay>6.4810</DegreeDay></Measurement><Measurement type='DailyMeasurement'><GasDay>2020-07-04T00:00:00</GasDay><UncorrectedCCF><Value>1740.0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>4927.1313</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>170875.25324320</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>6664.6475</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3120.0403</Value><Units>kPa</Units><Factor>4.48006790</Factor></Pressure><Temperature><Value>10.6992</Value><Units>C</Units><Factor>1.01710910</Factor></Temperature><SuperXFactor>1</SuperXFactor><PeakHourVolume nil='true'/><DegreeDay>7.3008</DegreeDay></Measurement><Measurement type='DailyMeasurement'><GasDay>2020-07-05T00:00:00</GasDay><UncorrectedCCF><Value>1940.0</Value><Units>CCF</Units></UncorrectedCCF><UncorrectedM3><Value>5493.4682</Value><Units>M3</Units></UncorrectedM3><CorrectedVolume><Value>190653.39467380</Value><Units>M3</Units></CorrectedVolume><CorrectedEnergy><Value>7436.0544</Value><Units>GJ</Units></CorrectedEnergy><MeasuredHeatValue><Value>39.0030</Value><Units>GJ/1000M3</Units></MeasuredHeatValue><Pressure><Value>3123.0172</Value><Units>kPa</Units><Factor>4.48434240</Factor></Pressure><Temperature><Value>10.5702</Value><Units>C</Units><Factor>1.01757150</Factor></Temperature><SuperXFactor>1</SuperXFactor><PeakHourVolume><Hour>12</Hour><Value>9832.70</Value><Units>M3</Units></PeakHourVolume><DegreeDay>7.4298</DegreeDay></Measurement></Measurements><Removed>false</Removed><LastReadDate nil='true'/></Meter></Meters></RedeliveryPoint></RedeliveryPoints><Meters/></Contract></Contracts></Company></Companies></GetDailyMeasurementResult></GetDailyMeasurementResponse></Body></Envelope>";
+
+            //--  [a-zA-Z0-9:=/\.-]+='([a-zA-Z0-9:/\.-]+)', eg.  xmlns='http:'
+            string pattern1 = @"[a-zA-Z0-9:=/\.-]+='([a-zA-Z0-9:/\.-]+)'";
+            strNew = Regex.Replace(strNew, pattern1, string.Empty, RegexOptions.Multiline | RegexOptions.IgnoreCase);
+
+            //-- <Meters>.*</Meters>, only match Meters 
+            strNew = strNew.ParseMetersElement();
+
+
+            ////--  [a-zA-Z0-9:=/\.-]+='', eg.  xmlns=''
+            //string pattern6 = @"[a-zA-Z0-9:=/\.-]+=''";
+            //strNew = Regex.Replace(strNew, pattern6, string.Empty, RegexOptions.Multiline | RegexOptions.IgnoreCase); //-- Regex.Replace(strNew, pattern6, "66"); 
+
+            ////-- Must have valid xml header 
+            strNew = "<?xml version='1.0' standalone='no'?>" + strNew;
+
+            //-- convert to Json format 
+            XmlDocument doc = new XmlDocument();
+            doc.LoadXml(strNew);
+
+            string json = JsonConvert.SerializeXmlNode(doc.FirstChild.NextSibling, Newtonsoft.Json.Formatting.None, true);
+
+
+            return json;
+        }
+
+
+
+        //-- Get Request Status
+        //public static string ParseAddrNum(this string value)
+        //{
+        //    string sField = value.Trim();
+
+        //    //-- match street name
+        //    Regex re = new Regex(@"(\d{11}[0-9A-Z\s\-]+([A-Za-z]){3})");
+
+        //    int count = 0;
+        //    string sResult = string.Empty;
+        //    foreach (Match match in re.Matches(sField))
+        //    {
+        //        if (count == 0)
+        //        {
+        //            string sTmp = match.Value.Replace("<br>", string.Empty).Replace("&nbsp;", string.Empty).Trim().PostParseAddrNum();
+        //            sResult = sTmp;
+        //            count++;
+        //        }
+        //        else
+        //        {
+        //            sResult = sResult.Trim() + "||" + match.Value.Replace("<br>", string.Empty).Replace("&nbsp;", string.Empty).Trim().PostParseAddrNum();
+        //        }
+        //    }
+
+        //    return sResult;
+        //}
+
+        private static string ParseMetersElement(this string value)
+        {
+            string sField = value.Trim();
+
+            //-- match meters element 
+            Regex re = new Regex(@"<Meters>.*</Meters>");  //-- \s[a-zA-Z0-9]+\b
+
+            int count = 0;
+            string sResult = string.Empty;
+            foreach (Match match in re.Matches(sField))
+            {
+                if (count == 0)
+                {
+                    sResult = match.Value.Trim();
+                    count++;
+                }
+                break;
+            }
+
+            return sResult;
+        }
+
+        private static string PostParseAddrUnit(this string value)
+        {
+            string sField = value.Trim();
+            //-- check 3 spaces
+            if (value.IndexOf("   ") <= 0)
+            {
+                return string.Empty;
+            }
+
+            //-- match unit num via 3 spaces on both sides
+            Regex re = new Regex(@"\s{3}[a-zA-Z0-9\-]+\s{3}");   //-- \s[a-zA-Z0-9]+\b
+
+            int count = 0;
+            string sResult = string.Empty;
+            foreach (Match match in re.Matches(sField))
+            {
+                if (count == 0)
+                {
+                    sResult = match.Value.Trim();
+
+                    count++;
+                }
+                break;
+            }
+
+            return sResult;
+        }
+
+        public static string ParseAddrName(this string value)
+        {
+            string sField = value.Trim();
+
+            //-- match street name
+            Regex re = new Regex(@"\s([A-Za-z]){3}([A-Za-z\s]+)<br>&nbsp;");
+
+            int count = 0;
+            string sResult = string.Empty;
+            foreach (Match match in re.Matches(sField))
+            {
+                if (count == 0)
+                {
+                    sResult = match.Value.Replace("<br>", string.Empty).Replace("&nbsp;", string.Empty).Trim();
+                    count++;
+                }
+                else
+                {
+                    sResult = sResult.Trim() + "||" + match.Value.Replace("<br>", string.Empty).Replace("&nbsp;", string.Empty).Trim();
+                }
+            }
+
+            return sResult;
+        }
+
+
+        public static string ParseAccountNum(this string value)
+        {
+            string sResult = value.Trim();
+
+            return sResult;
+        }
+
+    }
+}
+
