@@ -53,7 +53,7 @@ namespace HttpEncoding
                 "Range: bytes=0-16\r\n" +
                 "Connection: Close\r\n\r\n";
             Byte[] bytesSent = Encoding.ASCII.GetBytes(request);
-            Byte[] bytesReceived = new Byte[256];
+            Byte[] bytesReceived = new Byte[1024];
             string page = "";
 
             // Create a socket connection with the specified server and port.
@@ -84,15 +84,15 @@ namespace HttpEncoding
 
         public static void Main(string[] args)
         {
-            string host;
+            string host = "dexter.kplabs.in";
             int port = 80;
 
             Console.WriteLine("Tcp streatm Test - Begin.");
 
-            if (args.Length == 0)
-                host = "dexter.kplabs.in"; //-- OK with port 80
-            else
-                host = args[0];
+            //if (args.Length == 0)
+            //    host = "dexter.kplabs.in"; //-- OK with port 80
+            //else
+            //    host = args[0];
 
             string result = SocketSendReceive(host, port);
             Console.WriteLine(result);
